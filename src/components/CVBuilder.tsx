@@ -323,15 +323,62 @@ export default function CVBuilder() {
   );
 
   const handleExportPDF = async () => {
+    // On mobile the preview panel might be hidden (display:none via Tailwind).
+    // Temporarily make it visible so getElementById finds a rendered element,
+    // then clone it into an off-screen A4-width container for html2canvas.
     const element = document.getElementById("preview-content");
+
+    // If element is not in DOM at all (shouldn't happen but guard anyway)
     if (!element) return;
 
-    const canvas = await html2canvas(element, {
+    const A4_PX = 794; // ~210 mm at 96 dpi
+
+    // Temporarily force visibility if the panel is hidden on mobile
+    const previewPanel = element.closest(".hidden") as HTMLElement | null;
+    if (previewPanel) {
+      previewPanel.style.display = "flex";
+    }
+
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: -9999px;
+      width: ${A4_PX}px;
+      background: #ffffff;
+      z-index: -1;
+      pointer-events: none;
+    `;
+
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.style.cssText = `
+      width: ${A4_PX}px;
+      padding: 40px;
+      background: #ffffff;
+      box-sizing: border-box;
+      font-size: 14px;
+      line-height: 1.6;
+    `;
+    // Remove any hidden/overflow classes that might clip content in the clone
+    clone.classList.remove("hidden");
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    const canvas = await html2canvas(clone, {
       scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: "#ffffff",
+      width: A4_PX,
+      windowWidth: A4_PX,
     });
+
+    document.body.removeChild(wrapper);
+
+    // Restore hidden state if we forced it visible
+    if (previewPanel) {
+      previewPanel.style.display = "";
+    }
 
     const imgData = canvas.toDataURL("image/png", 1.0);
     const pdf = new jsPDF({ format: "a4", unit: "mm" });
@@ -356,7 +403,7 @@ export default function CVBuilder() {
 
     // Best-effort clickable links (requires URL text in the preview).
     if (mode === "cv") {
-      const elementRect = element.getBoundingClientRect();
+      const elementRect = { left: 0, top: 0, width: A4_PX, height: canvas.height / 2 };
       if (elementRect.width > 0 && elementRect.height > 0) {
         const anchors = Array.from(
           element.querySelectorAll<HTMLAnchorElement>(

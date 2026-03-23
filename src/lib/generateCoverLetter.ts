@@ -19,6 +19,7 @@ function addLocative(word: string): string {
   const frontVowels = ["e", "i", "ö", "ü"];
   const hardConsonants = ["ç", "f", "h", "k", "p", "s", "ş", "t"];
 
+  // Find the last vowel
   let lastVowel = "";
   for (let i = lower.length - 1; i >= 0; i--) {
     if ([...backVowels, ...frontVowels].includes(lower[i])) {
@@ -30,11 +31,27 @@ function addLocative(word: string): string {
   const lastChar = lower[lower.length - 1];
   const isHard = hardConsonants.includes(lastChar);
   const consonantPrefix = isHard ? "t" : "d";
-  const vowelSuffix = backVowels.includes(lastVowel) ? "a" : "e";
+
+  // For foreign/English words ending in a vowel (e, a, i, o, u etc.),
+  // Turkish convention generally uses -da not -de for back-sounding words.
+  // Heuristic: if the word contains no Turkish-specific chars and ends in
+  // a front vowel, treat it as back-vowel harmony (sounds like "a" in TR).
+  const hasTurkishChars = /[ğışöüçĞİŞÖÜÇ]/.test(word);
+  let vowelSuffix: string;
+  if (!hasTurkishChars && frontVowels.includes(lastChar)) {
+    // Foreign word ending in front vowel → use 'a' (e.g. Google'da, Apple'da)
+    vowelSuffix = "a";
+  } else {
+    vowelSuffix = backVowels.includes(lastVowel) ? "a" : "e";
+  }
 
   return `${word}'${consonantPrefix}${vowelSuffix}`;
 }
 
+/**
+ * Returns a concise, first-person-compatible summary snippet.
+ * For Turkish, trims safely without breaking grammar.
+ */
 function extractSummarySnippet(
   summary: string,
   language: CoverLetterLanguage
