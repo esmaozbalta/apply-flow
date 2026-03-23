@@ -2,29 +2,54 @@ import type { PersonalInfo, ExperienceItem } from "@/types";
 
 export type CoverLetterLanguage = "en" | "tr";
 
+
+
 /**
- * Extracts meaningful keywords/phrases from the professional summary
- * to incorporate into the cover letter body.
+ * Turkish vowel harmony: returns the correct locative suffix (-de/-da/-te/-ta)
+ * appended to a proper noun with an apostrophe.
+ *
+ * Examples:
+ *   addLocative("Digitürk")  → "Digitürk'te"
+ *   addLocative("Google")    → "Google'da"
+ *   addLocative("Ankara")    → "Ankara'da"
  */
-function extractSummaryKeywords(
+function addLocative(word: string): string {
+  const lower = word.toLowerCase();
+  const backVowels = ["a", "ı", "o", "u"];
+  const frontVowels = ["e", "i", "ö", "ü"];
+  const hardConsonants = ["ç", "f", "h", "k", "p", "s", "ş", "t"];
+
+  let lastVowel = "";
+  for (let i = lower.length - 1; i >= 0; i--) {
+    if ([...backVowels, ...frontVowels].includes(lower[i])) {
+      lastVowel = lower[i];
+      break;
+    }
+  }
+
+  const lastChar = lower[lower.length - 1];
+  const isHard = hardConsonants.includes(lastChar);
+  const consonantPrefix = isHard ? "t" : "d";
+  const vowelSuffix = backVowels.includes(lastVowel) ? "a" : "e";
+
+  return `${word}'${consonantPrefix}${vowelSuffix}`;
+}
+
+function extractSummarySnippet(
   summary: string,
   language: CoverLetterLanguage
 ): string {
   const trimmed = summary.trim();
-  if (!trimmed) {
-    return language === "tr"
-      ? "çeşitli profesyonel deneyim"
-      : "diverse professional experience";
-  }
+  if (!trimmed) return "";
 
-  const sentences = trimmed.split(/[.!?]+/).filter(Boolean);
-  const firstSentence = sentences[0]?.trim() || trimmed;
-  if (firstSentence.length < 150) {
-    return firstSentence;
-  }
-  const truncated = firstSentence.slice(0, 120).trim();
-  const lastSpace = truncated.lastIndexOf(" ");
-  return lastSpace > 60 ? truncated.slice(0, lastSpace) + "..." : truncated + "...";
+  const sentences = trimmed.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  const first = sentences[0]?.trim() || trimmed;
+
+  if (first.length <= 160) return first;
+
+  const cut = first.slice(0, 140).trim();
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 80 ? cut.slice(0, lastSpace) : cut) + "...";
 }
 
 /**
@@ -39,81 +64,99 @@ export function generateCoverLetter(
   role: string,
   language: CoverLetterLanguage = "en"
 ): string {
-  const applicantName = personalInfo.name.trim() || (language === "tr" ? "Başvuru Sahibi" : "Applicant");
-  const roleText = role.trim() || (language === "tr" ? "bu pozisyon" : "this position");
-  const companyText = companyName.trim() || (language === "tr" ? "şirketiniz" : "your company");
-  const summaryKeywords = extractSummaryKeywords(personalInfo.summary, language);
+  const applicantName =
+    personalInfo.name.trim() ||
+    (language === "tr" ? "Başvuru Sahibi" : "Applicant");
+  const roleText =
+    role.trim() || (language === "tr" ? "ilgili pozisyon" : "this position");
+  const companyText =
+    companyName.trim() || (language === "tr" ? "şirketiniz" : "your company");
+  const summarySnippet = extractSummarySnippet(personalInfo.summary, language);
 
   if (language === "tr") {
     const greeting = hiringManagerName.trim()
       ? `Sayın ${hiringManagerName},`
-      : companyText
+      : companyText !== "şirketiniz"
         ? `Sayın ${companyText} Ekibi,`
-        : "Sayın İlgili,";
+        : "Sayın İlgili Kişi,";
 
-    const experienceHighlights =
-      experience.length > 0
-        ? experience
-            .slice(0, 3)
-            .map(
-              (exp) =>
-                `${exp.company}'de ${exp.title}${exp.location ? ` (${exp.location})` : ""}`
-            )
-            .join("; ")
-        : "profesyonel geçmişim";
+    // Opening paragraph — uses summary naturally if available
+    const opening = summarySnippet
+      ? `${companyText !== "şirketiniz" ? addLocative(companyText) : companyText + " bünyesinde"} açık olan ${roleText} pozisyonuna başvurmaktan memnuniyet duyuyorum. ${summarySnippet}. Bu birikimimin söz konusu pozisyonun gereksinimleriyle örtüştüğüne inanıyorum.`
+      : `${companyText !== "şirketiniz" ? addLocative(companyText) : companyText + " bünyesinde"} açık olan ${roleText} pozisyonuna başvurmaktan memnuniyet duyuyorum. Sahip olduğum birikim ve yetkinliklerin bu pozisyonun gereksinimlerini karşıladığını düşünüyorum.`;
 
-    const template = [
+    // Experience paragraph
+    let experienceParagraph = "";
+    const validExp = experience.filter((e) => e.title || e.company);
+    if (validExp.length > 0) {
+      const highlights = validExp
+        .slice(0, 3)
+        .map((exp) => {
+          if (exp.title && exp.company) return `${addLocative(exp.company)} ${exp.title}`;
+          if (exp.company) return exp.company;
+          return exp.title;
+        })
+        .join(", ");
+      experienceParagraph = `Profesyonel geçmişimde ${highlights} gibi deneyimler yer almaktadır. Bu süreçlerde problem çözme, ekip çalışması ve sorumluluk alma konularında kendimi geliştirdim. ${companyText !== "şirketiniz" ? companyText : "Şirketiniz"} bünyesinde de aynı kararlılık ve özeni göstermeyi hedefliyorum.`;
+    } else {
+      experienceParagraph = `Edindiğim bilgi ve becerilerimi ${companyText !== "şirketiniz" ? companyText : "şirketiniz"} bünyesinde uygulamak ve ekibinize değer katmak istiyorum.`;
+    }
+
+    const closing = `Başvurumu değerlendirdiğiniz için teşekkür ederim. Görüşme fırsatı yaratmanız hâlinde memnuniyetle katılırım.`;
+
+    return [
       greeting,
       "",
-      `${companyText} bünyesindeki ${roleText} ilanıyla ilgileniyorum. ${summaryKeywords} konusunda deneyime sahip bir profesyonel olarak, geçmişimin gereksinimlerinizle uyumlu olduğuna inanıyorum.`,
+      opening,
       "",
-      experience.length > 0
-        ? `Deneyimlerim arasında ${experienceHighlights} bulunmaktadır. Bu görevlerde sürekli olarak sonuç odaklı çalıştım, disiplinler arası ekiplerle etkin iş birliği yaptım ve mükemmelliğe bağlılığımı gösterdim. Bu deneyimi ${companyText} ekibine taşıma ve başarınıza katkıda bulunma fırsatı beni heyecanlandırıyor.`
-        : `Becerilerimi ve özverimi ${companyText} ekibine taşımak ve nasıl katkıda bulunabileceğimi görüşmek isterim.`,
+      experienceParagraph,
       "",
-      `Başvurumu değerlendirdiğiniz için teşekkür ederim. Bu fırsatı görüşme imkânı sunmanızı dört gözle bekliyorum.`,
+      closing,
       "",
       "Saygılarımla,",
       applicantName,
-    ];
-
-    return template.join("\n");
+    ].join("\n");
   }
 
-  // English
+  // ── English ──────────────────────────────────────────────────────────────
+
   const greeting = hiringManagerName.trim()
     ? `Dear ${hiringManagerName},`
-    : companyText
+    : companyText !== "your company"
       ? `Dear ${companyText} Team,`
       : "Dear Hiring Manager,";
 
-  const experienceHighlights =
-    experience.length > 0
-      ? experience
-          .slice(0, 3)
-          .map(
-            (exp) =>
-              `${exp.title} at ${exp.company}${exp.location ? ` (${exp.location})` : ""}`
-          )
-          .join("; ")
-      : "my professional background";
+  const opening = summarySnippet
+    ? `I am writing to express my strong interest in the ${roleText} position at ${companyText}. ${summarySnippet}. I believe this background aligns well with what you are looking for.`
+    : `I am writing to express my strong interest in the ${roleText} position at ${companyText}. I am confident that my skills and experience make me a strong candidate for this role.`;
 
-  const template = [
+  const validExp = experience.filter((e) => e.title || e.company);
+  const experienceParagraph =
+    validExp.length > 0
+      ? (() => {
+          const highlights = validExp
+            .slice(0, 3)
+            .map(
+              (exp) =>
+                `${exp.title ? exp.title : ""}${exp.title && exp.company ? " at " : ""}${exp.company ? exp.company : ""}${exp.location ? ` (${exp.location})` : ""}`
+            )
+            .join("; ");
+          return `My professional experience includes ${highlights}. Throughout these roles, I have consistently delivered results, collaborated with cross-functional teams, and shown a strong commitment to quality. I am excited to bring this experience to ${companyText} and contribute to your team's continued success.`;
+        })()
+      : `I am eager to bring my skills and dedication to ${companyText} and would welcome the opportunity to discuss how I can contribute to your team.`;
+
+  return [
     greeting,
     "",
-    `I am writing to express my strong interest in the ${roleText} position at ${companyText}. As a professional with experience in ${summaryKeywords}, I believe my background aligns perfectly with your requirements.`,
+    opening,
     "",
-    experience.length > 0
-      ? `My experience includes ${experienceHighlights}. Throughout these roles, I have consistently delivered results, collaborated effectively with cross-functional teams, and demonstrated a commitment to excellence. I am excited about the opportunity to bring this experience to ${companyText} and contribute to your team's success.`
-      : `I am eager to bring my skills and dedication to ${companyText} and would welcome the opportunity to discuss how I can contribute to your team.`,
+    experienceParagraph,
     "",
     `Thank you for considering my application. I look forward to the possibility of discussing this opportunity further.`,
     "",
     "Best regards,",
     applicantName,
-  ];
-
-  return template.join("\n");
+  ].join("\n");
 }
 
 export function generateEmailBody(
@@ -122,12 +165,14 @@ export function generateEmailBody(
   role?: string,
   language: CoverLetterLanguage = "en"
 ): string {
-  const position = role?.trim() || (language === "tr" ? "[Pozisyon]" : "[Position]");
-  const name = personalInfo.name.trim() || (language === "tr" ? "Başvuru Sahibi" : "Applicant");
+  const position =
+    role?.trim() || (language === "tr" ? "[Pozisyon]" : "[Position]");
+  const name =
+    personalInfo.name.trim() ||
+    (language === "tr" ? "Başvuru Sahibi" : "Applicant");
   const subject =
     language === "tr"
-      ? `Konu: ${position} Başvurusu - ${name}`
-      : `Subject: Application for ${position} - ${name}`;
-  const lines = [subject, "", "---", "", coverLetter];
-  return lines.join("\n");
+      ? `Konu: ${position} Pozisyonu Başvurusu — ${name}`
+      : `Subject: Application for ${position} — ${name}`;
+  return [subject, "", "---", "", coverLetter].join("\n");
 }

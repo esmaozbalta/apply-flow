@@ -119,6 +119,40 @@ function CopyButton({
   );
 }
 
+function CopyButtonLocalized({
+  text,
+  label,
+  language,
+}: {
+  text: string;
+  label: string;
+  language: "en" | "tr";
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!text.trim()) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:border-stone-300 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <Copy className="h-4 w-4" />
+      {copied ? (language === "tr" ? "Kopyalandı!" : "Copied!") : label}
+    </button>
+  );
+}
+
 export default function CVBuilder() {
   const [mode, setMode] = useState<"cv" | "cover">("cv");
   const [personalInfo, setPersonalInfo] =
@@ -365,56 +399,29 @@ export default function CVBuilder() {
     );
   };
 
+  const [mobilePanel, setMobilePanel] = useState<"form" | "preview">("form");
+
   const inputClass =
     "w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder-stone-400 focus:border-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-900 transition-colors";
   const labelClass = "block text-xs font-medium text-stone-600 mb-1";
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Header with unified navigation */}
-      <header className="shrink-0 border-b border-stone-200 bg-white px-6 py-4">
-        <div className="flex items-center justify-between gap-6">
-          <h1 className="text-lg font-semibold tracking-tight text-stone-900 shrink-0">
+      {/* Header */}
+      <header className="shrink-0 border-b border-stone-200 bg-white px-4 py-3 md:px-6 md:py-4">
+        {/* Top row: logo + language + export */}
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-base font-semibold tracking-tight text-stone-900 shrink-0 md:text-lg">
             ApplyFlow
           </h1>
 
-          {/* Main segmented control - CV | Cover Letter */}
-          <div className="flex-1 flex justify-center">
-            <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-1">
-              <button
-                type="button"
-                onClick={() => setMode("cv")}
-                className={`inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition-all ${
-                  mode === "cv"
-                    ? "bg-white text-stone-900 shadow-sm"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                <FileText className="h-4 w-4" />
-                CV
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode("cover")}
-                className={`inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-sm font-medium transition-all ${
-                  mode === "cover"
-                    ? "bg-white text-stone-900 shadow-sm"
-                    : "text-stone-600 hover:text-stone-900"
-                }`}
-              >
-                <Mail className="h-4 w-4" />
-                Cover Letter
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Language */}
-            <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-1">
+            <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-0.5 md:p-1">
               <button
                 type="button"
                 onClick={() => setLanguage("en")}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors md:px-3 md:py-1.5 ${
                   language === "en"
                     ? "bg-white text-stone-900 shadow-sm"
                     : "text-stone-600 hover:text-stone-900"
@@ -425,7 +432,7 @@ export default function CVBuilder() {
               <button
                 type="button"
                 onClick={() => setLanguage("tr")}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors md:px-3 md:py-1.5 ${
                   language === "tr"
                     ? "bg-white text-stone-900 shadow-sm"
                     : "text-stone-600 hover:text-stone-900"
@@ -437,31 +444,120 @@ export default function CVBuilder() {
             <button
               type="button"
               onClick={handleExportPDF}
-              className="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800"
+              className="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-800 md:px-4 md:py-2 md:text-sm"
             >
-              <Download className="h-4 w-4" />
-              Export PDF
+              <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">{language === "tr" ? "PDF İndir" : "Export PDF"}</span>
+              <span className="sm:hidden">PDF</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom row on mobile: CV / Cover Letter + Form / Preview tabs */}
+        <div className="flex items-center justify-between gap-2 mt-2 md:hidden">
+          {/* Mode switcher */}
+          <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setMode("cv")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                mode === "cv"
+                  ? "bg-white text-stone-900 shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              CV
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("cover")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                mode === "cover"
+                  ? "bg-white text-stone-900 shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              {language === "tr" ? "Ön Yazı" : "Cover Letter"}
+            </button>
+          </div>
+
+          {/* Form / Preview panel switcher (mobile only) */}
+          <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-0.5">
+            <button
+              type="button"
+              onClick={() => setMobilePanel("form")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                mobilePanel === "form"
+                  ? "bg-white text-stone-900 shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              {language === "tr" ? "Form" : "Form"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobilePanel("preview")}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                mobilePanel === "preview"
+                  ? "bg-white text-stone-900 shadow-sm"
+                  : "text-stone-600 hover:text-stone-900"
+              }`}
+            >
+              {language === "tr" ? "Önizleme" : "Preview"}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main split layout */}
+      {/* Main layout */}
       <div className="flex flex-1 min-h-0">
-        {/* Left: Forms */}
-        <div className="w-[420px] shrink-0 overflow-y-auto border-r border-stone-200 bg-white p-6">
-          <div className="flex flex-col gap-8">
+        {/* Left: Forms — full width on mobile, fixed width on desktop */}
+        <div className={`${mobilePanel === "form" ? "flex" : "hidden"} md:flex w-full md:w-[420px] shrink-0 flex-col overflow-y-auto border-r border-stone-200 bg-white`}>
+          {/* Desktop-only mode switcher inside form panel */}
+          <div className="hidden md:flex items-center gap-1 px-6 pt-5 pb-0">
+            <div className="inline-flex rounded-lg border border-stone-200 bg-stone-50 p-1">
+              <button
+                type="button"
+                onClick={() => setMode("cv")}
+                className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                  mode === "cv"
+                    ? "bg-white text-stone-900 shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <FileText className="h-4 w-4" />
+                CV
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("cover")}
+                className={`inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all ${
+                  mode === "cover"
+                    ? "bg-white text-stone-900 shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <Mail className="h-4 w-4" />
+                {language === "tr" ? "Ön Yazı" : "Cover Letter"}
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-8 p-6">
             {/* CV Form - shown when mode is CV */}
             {mode === "cv" && (
               <>
             {/* Personal Info */}
             <section className="order-1">
-              <h2 className="text-sm font-semibold text-stone-900 mb-4">
-                Personal Info
+              <h2 className="text-sm font-semibold text-stone-800">
+                {language === "tr" ? "Kişisel Bilgiler" : "Personal Info"}
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="personal-name" className={labelClass}>Name</label>
+                  <label htmlFor="personal-name" className={labelClass}>
+                    {language === "tr" ? "Ad Soyad" : "Name"}
+                  </label>
                   <input
                     id="personal-name"
                     type="text"
@@ -470,7 +566,7 @@ export default function CVBuilder() {
                       setPersonalInfo((p) => ({ ...p, name: e.target.value }))
                     }
                     className={inputClass}
-                    placeholder="Full name"
+                    placeholder={language === "tr" ? "Ad ve soyadınız" : "Full name"}
                   />
                 </div>
                 <div>
@@ -492,7 +588,9 @@ export default function CVBuilder() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="personal-email" className={labelClass}>Email</label>
+                  <label htmlFor="personal-email" className={labelClass}>
+                    {language === "tr" ? "E-posta" : "Email"}
+                  </label>
                   <input
                     id="personal-email"
                     type="email"
@@ -505,7 +603,9 @@ export default function CVBuilder() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="personal-phone" className={labelClass}>Phone</label>
+                  <label htmlFor="personal-phone" className={labelClass}>
+                    {language === "tr" ? "Telefon" : "Phone"}
+                  </label>
                   <input
                     id="personal-phone"
                     type="tel"
@@ -576,7 +676,9 @@ export default function CVBuilder() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="personal-summary" className={labelClass}>Professional Summary</label>
+                  <label htmlFor="personal-summary" className={labelClass}>
+                    {language === "tr" ? "Profesyonel Özet" : "Professional Summary"}
+                  </label>
                   <textarea
                     id="personal-summary"
                     value={personalInfo.summary}
@@ -584,7 +686,11 @@ export default function CVBuilder() {
                       setPersonalInfo((p) => ({ ...p, summary: e.target.value }))
                     }
                     className={`${inputClass} min-h-[100px] resize-y`}
-                    placeholder="Brief overview of your background and key strengths..."
+                    placeholder={
+                      language === "tr"
+                        ? "Kendinizi kısaca tanıtın ve güçlü yönlerinizi belirtin..."
+                        : "Brief overview of your background and key strengths..."
+                    }
                     rows={4}
                   />
                 </div>
@@ -594,16 +700,16 @@ export default function CVBuilder() {
             {/* Skills */}
             <section className="order-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-stone-900">
+                <h2 className="text-sm font-semibold text-stone-800">
                   {language === "tr" ? "Yetenekler" : "Skills"}
                 </h2>
                 <button
                   type="button"
                   onClick={addSkill}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  {language === "tr" ? "Ekle" : "Add"}
                 </button>
               </div>
               <div className="space-y-4">
@@ -640,16 +746,16 @@ export default function CVBuilder() {
             {/* Languages */}
             <section className="order-7">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-stone-900">
+                <h2 className="text-sm font-semibold text-stone-800">
                   {language === "tr" ? "Diller" : "Languages"}
                 </h2>
                 <button
                   type="button"
                   onClick={addLanguage}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  {language === "tr" ? "Ekle" : "Add"}
                 </button>
               </div>
               <div className="space-y-4">
@@ -686,16 +792,16 @@ export default function CVBuilder() {
             {/* Projects */}
             <section className="order-4">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-stone-900">
+                <h2 className="text-sm font-semibold text-stone-800">
                   {language === "tr" ? "Projeler" : "Projects"}
                 </h2>
                 <button
                   type="button"
                   onClick={addProject}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  {language === "tr" ? "Ekle" : "Add"}
                 </button>
               </div>
               <div className="space-y-6">
@@ -779,16 +885,16 @@ export default function CVBuilder() {
             {/* Certificates */}
             <section className="order-5">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-stone-900">
+                <h2 className="text-sm font-semibold text-stone-800">
                   {language === "tr" ? "Sertifikalar" : "Certificates"}
                 </h2>
                 <button
                   type="button"
                   onClick={addCertificate}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  {language === "tr" ? "Ekle" : "Add"}
                 </button>
               </div>
               <div className="space-y-6">
@@ -850,16 +956,16 @@ export default function CVBuilder() {
             {/* Experience */}
             <section className="order-3">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-stone-900">
-                  Experience
+                <h2 className="text-sm font-semibold text-stone-800">
+                  {language === "tr" ? "Deneyim" : "Experience"}
                 </h2>
                 <button
                   type="button"
                   onClick={addExperience}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  {language === "tr" ? "Ekle" : "Add"}
                 </button>
               </div>
               <div className="space-y-6">
@@ -870,19 +976,22 @@ export default function CVBuilder() {
                   >
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-medium text-stone-500">
-                        Experience
+                        {language === "tr" ? "Deneyim" : "Experience"}
                       </span>
                       <button
                         type="button"
                         onClick={() => removeExperience(exp.id)}
                         className="text-stone-400 hover:text-red-600 p-1"
+                        aria-label={language === "tr" ? "Deneyim kaldır" : "Remove experience"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2 sm:col-span-1">
-                        <label htmlFor={`exp-title-${expIndex}`} className={labelClass}>Title</label>
+                        <label htmlFor={`exp-title-${expIndex}`} className={labelClass}>
+                          {language === "tr" ? "Unvan" : "Title"}
+                        </label>
                         <input
                           id={`exp-title-${expIndex}`}
                           type="text"
@@ -891,11 +1000,13 @@ export default function CVBuilder() {
                             updateExperience(exp.id, { title: e.target.value })
                           }
                           className={inputClass}
-                          placeholder="Job title"
+                          placeholder={language === "tr" ? "İş unvanı" : "Job title"}
                         />
                       </div>
                       <div className="col-span-2 sm:col-span-1">
-                        <label htmlFor={`exp-company-${expIndex}`} className={labelClass}>Company</label>
+                        <label htmlFor={`exp-company-${expIndex}`} className={labelClass}>
+                          {language === "tr" ? "Şirket" : "Company"}
+                        </label>
                         <input
                           id={`exp-company-${expIndex}`}
                           type="text"
@@ -906,11 +1017,13 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="Company name"
+                          placeholder={language === "tr" ? "Şirket adı" : "Company name"}
                         />
                       </div>
                       <div>
-                        <label htmlFor={`exp-start-${expIndex}`} className={labelClass}>Start</label>
+                        <label htmlFor={`exp-start-${expIndex}`} className={labelClass}>
+                          {language === "tr" ? "Başlangıç" : "Start"}
+                        </label>
                         <input
                           id={`exp-start-${expIndex}`}
                           type="text"
@@ -921,11 +1034,13 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="e.g. Jan 2020"
+                          placeholder={language === "tr" ? "Örn. Oca 2020" : "e.g. Jan 2020"}
                         />
                       </div>
                       <div>
-                        <label htmlFor={`exp-end-${expIndex}`} className={labelClass}>End</label>
+                        <label htmlFor={`exp-end-${expIndex}`} className={labelClass}>
+                          {language === "tr" ? "Bitiş" : "End"}
+                        </label>
                         <input
                           id={`exp-end-${expIndex}`}
                           type="text"
@@ -934,7 +1049,7 @@ export default function CVBuilder() {
                             updateExperience(exp.id, { endDate: e.target.value })
                           }
                           className={inputClass}
-                          placeholder="e.g. Present"
+                          placeholder={language === "tr" ? "Örn. Devam ediyor" : "e.g. Present"}
                           disabled={exp.current}
                         />
                       </div>
@@ -946,7 +1061,7 @@ export default function CVBuilder() {
                           onChange={(e) =>
                             updateExperience(exp.id, {
                               current: e.target.checked,
-                              endDate: e.target.checked ? "Present" : "",
+                              endDate: e.target.checked ? (language === "tr" ? "Devam ediyor" : "Present") : "",
                             })
                           }
                           className="rounded border-stone-300"
@@ -955,11 +1070,13 @@ export default function CVBuilder() {
                           htmlFor={`exp-current-${expIndex}`}
                           className="text-sm text-stone-600"
                         >
-                          Current role
+                          {language === "tr" ? "Hâlâ devam ediyor" : "Current role"}
                         </label>
                       </div>
                       <div className="col-span-2">
-                        <label htmlFor={`exp-description-${expIndex}`} className={labelClass}>Description</label>
+                        <label htmlFor={`exp-description-${expIndex}`} className={labelClass}>
+                          {language === "tr" ? "Açıklama" : "Description"}
+                        </label>
                         <textarea
                           id={`exp-description-${expIndex}`}
                           value={exp.description}
@@ -969,7 +1086,11 @@ export default function CVBuilder() {
                             })
                           }
                           className={`${inputClass} min-h-[80px] resize-y`}
-                          placeholder="Key responsibilities and achievements..."
+                          placeholder={
+                            language === "tr"
+                              ? "Temel sorumluluklar ve başarılar..."
+                              : "Key responsibilities and achievements..."
+                          }
                           rows={3}
                         />
                       </div>
@@ -982,16 +1103,16 @@ export default function CVBuilder() {
             {/* Education */}
             <section className="order-2">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-stone-900">
-                  Education
+                <h2 className="text-sm font-semibold text-stone-800">
+                  {language === "tr" ? "Eğitim" : "Education"}
                 </h2>
                 <button
                   type="button"
                   onClick={addEducation}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-stone-600 hover:text-stone-900"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                 >
                   <Plus className="h-4 w-4" />
-                  Add
+                  {language === "tr" ? "Ekle" : "Add"}
                 </button>
               </div>
               <div className="space-y-6">
@@ -1002,19 +1123,22 @@ export default function CVBuilder() {
                   >
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-medium text-stone-500">
-                        Education
+                        {language === "tr" ? "Eğitim" : "Education"}
                       </span>
                       <button
                         type="button"
                         onClick={() => removeEducation(edu.id)}
                         className="text-stone-400 hover:text-red-600 p-1"
+                        aria-label={language === "tr" ? "Eğitim kaldır" : "Remove education"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2 sm:col-span-1">
-                        <label htmlFor={`edu-degree-${eduIndex}`} className={labelClass}>Degree</label>
+                        <label htmlFor={`edu-degree-${eduIndex}`} className={labelClass}>
+                          {language === "tr" ? "Derece / Bölüm" : "Degree"}
+                        </label>
                         <input
                           id={`edu-degree-${eduIndex}`}
                           type="text"
@@ -1025,11 +1149,13 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="e.g. B.S. Computer Science"
+                          placeholder={language === "tr" ? "Örn. Bilgisayar Mühendisliği" : "e.g. B.S. Computer Science"}
                         />
                       </div>
                       <div className="col-span-2 sm:col-span-1">
-                        <label htmlFor={`edu-institution-${eduIndex}`} className={labelClass}>Institution</label>
+                        <label htmlFor={`edu-institution-${eduIndex}`} className={labelClass}>
+                          {language === "tr" ? "Kurum" : "Institution"}
+                        </label>
                         <input
                           id={`edu-institution-${eduIndex}`}
                           type="text"
@@ -1040,11 +1166,13 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="University name"
+                          placeholder={language === "tr" ? "Üniversite adı" : "University name"}
                         />
                       </div>
                       <div>
-                        <label htmlFor={`edu-start-${eduIndex}`} className={labelClass}>Start</label>
+                        <label htmlFor={`edu-start-${eduIndex}`} className={labelClass}>
+                          {language === "tr" ? "Başlangıç" : "Start"}
+                        </label>
                         <input
                           id={`edu-start-${eduIndex}`}
                           type="text"
@@ -1055,11 +1183,13 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="e.g. 2016"
+                          placeholder={language === "tr" ? "Örn. 2016" : "e.g. 2016"}
                         />
                       </div>
                       <div>
-                        <label htmlFor={`edu-end-${eduIndex}`} className={labelClass}>End</label>
+                        <label htmlFor={`edu-end-${eduIndex}`} className={labelClass}>
+                          {language === "tr" ? "Bitiş" : "End"}
+                        </label>
                         <input
                           id={`edu-end-${eduIndex}`}
                           type="text"
@@ -1070,11 +1200,13 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="e.g. 2020"
+                          placeholder={language === "tr" ? "Örn. 2020" : "e.g. 2020"}
                         />
                       </div>
                       <div className="col-span-2">
-                        <label htmlFor={`edu-details-${eduIndex}`} className={labelClass}>Details (optional)</label>
+                        <label htmlFor={`edu-details-${eduIndex}`} className={labelClass}>
+                          {language === "tr" ? "Detaylar (isteğe bağlı)" : "Details (optional)"}
+                        </label>
                         <input
                           id={`edu-details-${eduIndex}`}
                           type="text"
@@ -1085,7 +1217,7 @@ export default function CVBuilder() {
                             })
                           }
                           className={inputClass}
-                          placeholder="Honors, activities, etc."
+                          placeholder={language === "tr" ? "Onur, kulüpler vb." : "Honors, activities, etc."}
                         />
                       </div>
                     </div>
@@ -1099,7 +1231,7 @@ export default function CVBuilder() {
             {/* Cover Letter Form - shown when mode is Cover Letter */}
             {mode === "cover" && (
               <section>
-                <h2 className="text-sm font-semibold text-stone-900 mb-4">
+                <h2 className="text-sm font-semibold text-stone-800">
                   {language === "tr" ? "Kapak Mektubu Bilgileri" : "Cover Letter Details"}
                 </h2>
                 <div className="space-y-4">
@@ -1113,7 +1245,7 @@ export default function CVBuilder() {
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       className={inputClass}
-                      placeholder="e.g. Acme Inc."
+                      placeholder={language === "tr" ? "Örn. Acme A.Ş." : "e.g. Acme Inc."}
                     />
                   </div>
                   <div>
@@ -1126,7 +1258,7 @@ export default function CVBuilder() {
                       value={hiringManagerName}
                       onChange={(e) => setHiringManagerName(e.target.value)}
                       className={inputClass}
-                      placeholder="e.g. Jane Smith (optional)"
+                      placeholder={language === "tr" ? "Örn. Ayşe Kaya (isteğe bağlı)" : "e.g. Jane Smith (optional)"}
                     />
                   </div>
                   <div>
@@ -1139,7 +1271,7 @@ export default function CVBuilder() {
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
                       className={inputClass}
-                      placeholder="e.g. Senior Software Engineer"
+                      placeholder={language === "tr" ? "Örn. Kıdemli Yazılım Mühendisi" : "e.g. Senior Software Engineer"}
                     />
                   </div>
                 </div>
@@ -1148,13 +1280,13 @@ export default function CVBuilder() {
           </div>
         </div>
 
-        {/* Right: Live Preview - synchronized with mode */}
-        <div className="flex-1 min-w-0 overflow-y-auto bg-stone-100 p-8 flex justify-center">
+        {/* Right: Live Preview - hidden on mobile when form tab is active */}
+        <div className={`${mobilePanel === "preview" ? "flex" : "hidden"} md:flex flex-1 min-w-0 flex-col overflow-y-auto bg-stone-100 p-4 md:p-8 items-center`}>
           <div className="w-full max-w-[210mm]">
             {mode === "cv" ? (
               <div
                 id="preview-content"
-                className="rounded-lg border border-stone-200 bg-white p-10 shadow-sm"
+                className="rounded-lg border border-stone-200 bg-white p-6 md:p-10 shadow-sm"
               >
                 <CVPreview
                   personalInfo={personalInfo}
@@ -1171,7 +1303,7 @@ export default function CVBuilder() {
               <div className="space-y-6">
                 <div
                   id="preview-content"
-                  className="rounded-lg border border-stone-200 bg-white p-10 shadow-sm w-full"
+                  className="rounded-lg border border-stone-200 bg-white p-6 md:p-10 shadow-sm w-full"
                 >
                   <CoverLetterPreview
                     personalInfo={personalInfo}
@@ -1187,14 +1319,15 @@ export default function CVBuilder() {
                 </div>
                 <div className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-stone-900">
+                    <h3 className="text-sm font-semibold text-stone-800">
                       {language === "tr"
                         ? "Kullanıma Hazır E-posta İçeriği"
                         : "Ready-to-use Email Body"}
                     </h3>
-                    <CopyButton
+                    <CopyButtonLocalized
                       text={emailBodyText}
                       label={language === "tr" ? "E-postayı Kopyala" : "Copy Email"}
+                      language={language}
                     />
                   </div>
                   <pre className="whitespace-pre-wrap rounded-lg bg-stone-50 p-4 text-sm text-stone-700 font-sans overflow-x-auto">
@@ -1203,18 +1336,19 @@ export default function CVBuilder() {
                 </div>
                 <div className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-stone-900">
+                    <h3 className="text-sm font-semibold text-stone-800">
                       {language === "tr"
                         ? "Kapak Mektubu Metni"
                         : "Cover Letter Text"}
                     </h3>
-                    <CopyButton
+                    <CopyButtonLocalized
                       text={effectiveCoverLetterText}
                       label={
                         language === "tr"
                           ? "Kapak Mektubunu Kopyala"
                           : "Copy Cover Letter"
                       }
+                      language={language}
                     />
                   </div>
                   <pre className="whitespace-pre-wrap rounded-lg bg-stone-50 p-4 text-sm text-stone-700 font-sans overflow-x-auto">
@@ -1257,6 +1391,7 @@ function CVPreview({
     projects: language === "tr" ? "Projeler" : "Projects",
     certificates:
       language === "tr" ? "Sertifikalar" : "Certificates",
+    summary: language === "tr" ? "Hakkımda" : "About",
     yourName: language === "tr" ? "Adınız" : "Your Name",
     emptyCv: language === "tr"
       ? "CV önizlemesini görmek için formu doldurun"
@@ -1337,9 +1472,14 @@ function CVPreview({
           )}
         </div>
         {personalInfo.summary && (
-          <p className="mt-4 text-sm leading-relaxed text-stone-700">
-            {personalInfo.summary}
-          </p>
+          <div className="mt-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500 mb-2">
+              {labels.summary}
+            </h2>
+            <p className="text-sm leading-relaxed text-stone-700">
+              {personalInfo.summary}
+            </p>
+          </div>
         )}
       </div>
 
@@ -1395,7 +1535,7 @@ function CVPreview({
                 <div key={exp.id}>
                   <div className="flex justify-between items-baseline gap-2">
                     <h3 className="font-semibold text-stone-900">
-                      {exp.title || "Job Title"}
+                      {exp.title || (language === "tr" ? "İş Unvanı" : "Job Title")}
                     </h3>
                     <span className="text-xs text-stone-500 shrink-0">
                       {exp.startDate}
@@ -1459,7 +1599,7 @@ function CVPreview({
                 <div key={edu.id}>
                   <div className="flex justify-between items-baseline gap-2">
                     <h3 className="font-semibold text-stone-900">
-                      {edu.degree || "Degree"}
+                      {edu.degree || (language === "tr" ? "Derece / Bölüm" : "Degree")}
                     </h3>
                     <span className="text-xs text-stone-500 shrink-0">
                       {edu.startDate}
